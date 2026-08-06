@@ -1,0 +1,1641 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tracker</title>
+<style>
+  @font-face { font-family: 'system-fallback'; src: local('Arial'); }
+
+  :root {
+    --green: #26332B;
+    --green-2: #2f3f35;
+    --bone: #E7E3D6;
+    --bone-2: #d9d4c3;
+    --amber: #F2A007;
+    --oxide: #A8412A;
+    --ink: #1c221d;
+    --ink-soft: #4a5148;
+    --line: #b9b3a0;
+    --danger: #A8412A;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--green);
+    color: var(--bone);
+    font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    padding: 12px 12px calc(env(safe-area-inset-bottom, 0) + 80px);
+    max-width: 640px;
+    margin: 0 auto;
+    min-height: 100vh;
+  }
+
+  h1, h2, h3, .label, .stamp {
+    font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 700;
+  }
+
+  .mono, .num {
+    font-family: 'IBM Plex Mono', 'Courier New', monospace;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+  }
+
+  button {
+    font-family: inherit;
+    cursor: pointer;
+  }
+
+  button:focus-visible,
+  a:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible,
+  [tabindex]:focus-visible {
+    outline: 3px solid var(--amber);
+    outline-offset: 2px;
+  }
+
+  /* ===== Header / Gauge ===== */
+  .topbar {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 10px 2px 6px;
+  }
+  .topbar h1 {
+    font-size: 22px;
+    margin: 0;
+    color: var(--bone);
+    letter-spacing: 0.08em;
+  }
+  .topbar h1 .dot { color: var(--amber); }
+
+  .nav-tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+  .nav-tabs button {
+    flex: 1;
+    background: transparent;
+    border: 2px solid var(--bone-2);
+    color: var(--bone);
+    padding: 10px 6px;
+    border-radius: 6px;
+    font-family: 'Barlow Condensed', sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 700;
+    font-size: 14px;
+    min-height: 44px;
+  }
+  .nav-tabs button.active {
+    background: var(--bone);
+    color: var(--ink);
+    border-color: var(--bone);
+  }
+
+  .card {
+    background: var(--bone);
+    color: var(--ink);
+    border-radius: 8px;
+    padding: 14px;
+    margin-bottom: 12px;
+    box-shadow: 0 2px 0 rgba(0,0,0,0.25);
+    border: 1px solid rgba(0,0,0,0.15);
+  }
+
+  .gauge-card {
+    text-align: center;
+    padding: 18px 14px 16px;
+  }
+  .gauge-label {
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin-bottom: 4px;
+  }
+  .gauge-pct {
+    font-size: 56px;
+    line-height: 1;
+    font-weight: 700;
+    color: var(--oxide);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .gauge-bar-track {
+    height: 18px;
+    background: var(--bone-2);
+    border-radius: 9px;
+    overflow: hidden;
+    margin: 12px 0 10px;
+    border: 1px solid rgba(0,0,0,0.15);
+  }
+  .gauge-bar-fill {
+    height: 100%;
+    background: var(--oxide);
+    border-radius: 9px 0 0 9px;
+    transition: width 0.3s ease;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .gauge-bar-fill { transition: none; }
+  }
+  .gauge-sub {
+    display: flex;
+    justify-content: space-around;
+    font-size: 13px;
+    color: var(--ink-soft);
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .gauge-sub .val {
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  .day-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .day-nav .day-label {
+    flex: 1;
+    text-align: center;
+    font-size: 15px;
+  }
+  .day-nav button {
+    background: var(--bone);
+    color: var(--ink);
+    border: none;
+    border-radius: 6px;
+    min-width: 44px;
+    min-height: 44px;
+    font-size: 18px;
+  }
+  .day-nav button:disabled {
+    opacity: 0.4;
+  }
+
+  /* ===== Section headers ===== */
+  .section-title {
+    font-size: 15px;
+    color: var(--bone);
+    margin: 18px 2px 8px;
+    opacity: 0.85;
+  }
+
+  /* ===== Timer cards ===== */
+  .timer-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .timer-card {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    border-left: 6px solid var(--bone-2);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .timer-card { transition: none; }
+  }
+  .timer-card.running {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 0 rgba(0,0,0,0.3);
+    border-left-color: var(--amber);
+  }
+  .timer-card.running .lamp {
+    animation: pulse 1.6s ease-in-out infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .timer-card.running .lamp { animation: none; opacity: 1; }
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 0.4; box-shadow: 0 0 0px var(--amber); }
+    50% { opacity: 1; box-shadow: 0 0 10px var(--amber); }
+  }
+  .lamp {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--bone-2);
+    flex-shrink: 0;
+  }
+  .timer-card.running .lamp {
+    background: var(--amber);
+  }
+  .timer-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .timer-name {
+    font-size: 17px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .rev-badge {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--oxide);
+    flex-shrink: 0;
+  }
+  .timer-meta {
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin-top: 2px;
+  }
+  .timer-elapsed {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--oxide);
+  }
+  .timer-warn {
+    font-size: 12px;
+    color: var(--oxide);
+    margin-top: 3px;
+  }
+  .timer-btn {
+    border: none;
+    border-radius: 6px;
+    min-width: 76px;
+    min-height: 44px;
+    font-family: 'Barlow Condensed', sans-serif;
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+  .timer-btn.start {
+    background: var(--green);
+    color: var(--bone);
+  }
+  .timer-btn.stop {
+    background: var(--oxide);
+    color: var(--bone);
+  }
+
+  /* ===== Buttons general ===== */
+  .btn {
+    border: none;
+    border-radius: 6px;
+    padding: 10px 14px;
+    min-height: 44px;
+    font-family: 'Barlow Condensed', sans-serif;
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    font-size: 14px;
+    background: var(--green);
+    color: var(--bone);
+  }
+  .btn.secondary {
+    background: var(--bone-2);
+    color: var(--ink);
+  }
+  .btn.danger {
+    background: var(--oxide);
+    color: var(--bone);
+  }
+  .btn.block {
+    width: 100%;
+  }
+  .btn:disabled {
+    opacity: 0.5;
+  }
+  .btn-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  /* ===== Quick add / forms ===== */
+  .field {
+    margin-bottom: 10px;
+  }
+  .field label {
+    display: block;
+    font-size: 12px;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-family: 'Barlow Condensed', sans-serif;
+    margin-bottom: 4px;
+  }
+  .field input,
+  .field select,
+  .field textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    font-size: 16px;
+    background: #fff;
+    color: var(--ink);
+    font-family: inherit;
+    min-height: 44px;
+  }
+  .field input.mono {
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  /* ===== Calls & Income row cards ===== */
+  .stat-row {
+    display: flex;
+    gap: 10px;
+  }
+  .stat-card {
+    flex: 1;
+    text-align: center;
+    padding: 14px 8px;
+  }
+  .stat-card .big {
+    font-size: 34px;
+    font-weight: 700;
+    color: var(--oxide);
+  }
+  .stat-card .label {
+    font-size: 12px;
+    color: var(--ink-soft);
+    margin-top: 2px;
+  }
+  .call-btn {
+    width: 100%;
+    padding: 16px;
+    font-size: 22px;
+    background: var(--oxide);
+    color: var(--bone);
+    border: none;
+    border-radius: 8px;
+    font-family: 'Barlow Condensed', sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 700;
+    min-height: 56px;
+  }
+
+  /* ===== History list ===== */
+  .hist-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(0,0,0,0.1);
+  }
+  .hist-item:last-child { border-bottom: none; }
+  .hist-icon {
+    width: 30px;
+    height: 30px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    flex-shrink: 0;
+    background: var(--bone-2);
+    font-weight: 700;
+  }
+  .hist-icon.rev { background: var(--oxide); color: var(--bone); }
+  .hist-body { flex: 1; min-width: 0; }
+  .hist-title {
+    font-size: 15px;
+    font-weight: 600;
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .hist-title .amt { color: var(--oxide); font-family: 'IBM Plex Mono', monospace; }
+  .hist-meta {
+    font-size: 12px;
+    color: var(--ink-soft);
+    margin-top: 1px;
+  }
+  .hist-note {
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin-top: 2px;
+    font-style: italic;
+  }
+  .hist-actions {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+  .icon-btn {
+    background: transparent;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    min-width: 36px;
+    min-height: 36px;
+    font-size: 14px;
+    color: var(--ink);
+  }
+  .empty-state {
+    text-align: center;
+    color: var(--ink-soft);
+    padding: 20px 10px;
+    font-size: 14px;
+  }
+
+  /* ===== Categories editor ===== */
+  .cat-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(0,0,0,0.1);
+  }
+  .cat-row:last-child { border-bottom: none; }
+  .cat-row .order-btns {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .cat-row .order-btns button {
+    background: var(--bone-2);
+    border: none;
+    border-radius: 4px;
+    width: 28px;
+    height: 20px;
+    font-size: 10px;
+    line-height: 1;
+  }
+  .cat-row input[type=text] {
+    flex: 1;
+    min-width: 0;
+    padding: 8px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    font-size: 15px;
+    min-height: 40px;
+    background: #fff;
+    color: var(--ink);
+  }
+  .cat-row label.rev-toggle {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .cat-row input[type=checkbox] {
+    width: 20px;
+    height: 20px;
+  }
+
+  /* ===== Modal (edit) ===== */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    z-index: 100;
+    padding: 0;
+  }
+  .modal-sheet {
+    background: var(--bone);
+    color: var(--ink);
+    width: 100%;
+    max-width: 640px;
+    border-radius: 14px 14px 0 0;
+    padding: 18px 16px calc(env(safe-area-inset-bottom, 0) + 18px);
+    max-height: 85vh;
+    overflow-y: auto;
+  }
+  .modal-sheet h2 {
+    margin: 0 0 12px;
+    font-size: 18px;
+  }
+
+  .warn-banner {
+    background: rgba(242, 160, 7, 0.18);
+    border: 1px solid var(--amber);
+    color: var(--amber);
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    margin-top: 8px;
+  }
+
+  .footer-links {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin-top: 20px;
+    opacity: 0.8;
+  }
+  .footer-links button {
+    background: transparent;
+    border: 1px solid var(--bone-2);
+    color: var(--bone);
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 12px;
+    min-height: 40px;
+    font-family: 'Barlow Condensed', sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  input[type=file] { display: none; }
+
+  @media (max-width: 380px) {
+    .gauge-pct { font-size: 46px; }
+    .stat-card .big { font-size: 26px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>Ronan<span class="dot">.</span>Track</h1>
+</div>
+
+<div class="nav-tabs" role="tablist">
+  <button data-view="today" class="active" id="tab-today">Today</button>
+  <button data-view="history" id="tab-history">History</button>
+  <button data-view="categories" id="tab-categories">Categories</button>
+</div>
+
+<div id="view-root"></div>
+
+<div class="footer-links">
+  <button id="btn-export">Export JSON</button>
+  <button id="btn-import">Import JSON</button>
+  <input type="file" id="file-import" accept="application/json">
+</div>
+
+<div id="modal-root"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  var STORAGE_KEY = "tracker:v1";
+  var DEBOUNCE_MS = 200;
+  var MIN_SESSION_SEC = 30;
+  var LONG_TIMER_WARN_MS = 4 * 60 * 60 * 1000;
+
+  // ---------- Seed ----------
+  function seedState(){
+    var now = Date.now();
+    return {
+      categories: [
+        { id: uid(), name: "PeakFlow", revenue: true, order: 0 },
+        { id: uid(), name: "Ranch", revenue: false, order: 1 },
+        { id: uid(), name: "Build", revenue: false, order: 2 },
+        { id: uid(), name: "Admin", revenue: false, order: 3 }
+      ],
+      running: null,
+      sessions: [],
+      calls: [],
+      income: []
+    };
+  }
+
+  function uid(){
+    return Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 9);
+  }
+
+  // ---------- Persistence layer (state access indirection for future AI layer) ----------
+  var _state = null;
+  var _saveTimer = null;
+
+  function loadState(){
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return seedState();
+      var parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== "object" || !Array.isArray(parsed.categories)) {
+        return seedState();
+      }
+      // fill defaults defensively
+      parsed.sessions = Array.isArray(parsed.sessions) ? parsed.sessions : [];
+      parsed.calls = Array.isArray(parsed.calls) ? parsed.calls : [];
+      parsed.income = Array.isArray(parsed.income) ? parsed.income : [];
+      parsed.running = parsed.running && typeof parsed.running === "object" ? parsed.running : null;
+      return parsed;
+    } catch (e) {
+      return seedState();
+    }
+  }
+
+  function persistNow(){
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(_state));
+    } catch (e) {
+      // storage full or unavailable; silently ignore, in-memory state still works
+    }
+  }
+
+  function schedulePersist(){
+    if (_saveTimer) clearTimeout(_saveTimer);
+    _saveTimer = setTimeout(persistNow, DEBOUNCE_MS);
+  }
+
+  function getState(){
+    return _state;
+  }
+
+  function mutate(fn){
+    fn(_state);
+    schedulePersist();
+    render();
+  }
+
+  // ---------- Date helpers (local time) ----------
+  function dayKey(ts){
+    var d = new Date(ts);
+    return d.getFullYear() + "-" + pad(d.getMonth()+1) + "-" + pad(d.getDate());
+  }
+  function pad(n){ return n < 10 ? "0"+n : ""+n; }
+
+  function startOfDay(ts){
+    var d = new Date(ts);
+    d.setHours(0,0,0,0);
+    return d.getTime();
+  }
+
+  function todayKey(){
+    return dayKey(Date.now());
+  }
+
+  function addDays(key, delta){
+    var parts = key.split("-").map(Number);
+    var d = new Date(parts[0], parts[1]-1, parts[2]);
+    d.setDate(d.getDate() + delta);
+    return d.getFullYear() + "-" + pad(d.getMonth()+1) + "-" + pad(d.getDate());
+  }
+
+  function keyToLabel(key){
+    var parts = key.split("-").map(Number);
+    var d = new Date(parts[0], parts[1]-1, parts[2]);
+    var today = todayKey();
+    var yest = addDays(today, -1);
+    if (key === today) return "Today — " + d.toDateString();
+    if (key === yest) return "Yesterday — " + d.toDateString();
+    return d.toDateString();
+  }
+
+  function fmtDateTimeLocal(ts){
+    var d = new Date(ts);
+    return d.getFullYear() + "-" + pad(d.getMonth()+1) + "-" + pad(d.getDate()) + "T" + pad(d.getHours()) + ":" + pad(d.getMinutes());
+  }
+  function parseDateTimeLocal(v){
+    // v like "2026-08-06T14:30"
+    var t = new Date(v);
+    return t.getTime();
+  }
+
+  // ---------- Formatting ----------
+  function fmtMinutes(mins){
+    mins = Math.round(mins);
+    var h = Math.floor(mins/60);
+    var m = mins % 60;
+    if (h > 0) return h + "h " + m + "m";
+    return m + "m";
+  }
+
+  function fmtElapsed(ms){
+    var totalSec = Math.floor(ms/1000);
+    var h = Math.floor(totalSec/3600);
+    var m = Math.floor((totalSec%3600)/60);
+    var s = totalSec % 60;
+    if (h > 0) return h + "h " + pad(m) + "m";
+    return m + "m " + pad(s) + "s";
+  }
+
+  // money as integer cents internally-free: we store raw numbers, format only at display
+  function fmtMoney(n){
+    if (typeof n !== "number" || isNaN(n)) n = 0;
+    // round to cents for display only, avoid FP artifacts
+    var cents = Math.round(n * 100);
+    var sign = cents < 0 ? "-" : "";
+    cents = Math.abs(cents);
+    var dollars = Math.floor(cents / 100);
+    var rem = cents % 100;
+    return sign + "$" + dollars.toLocaleString("en-US") + "." + pad(rem);
+  }
+
+  // ---------- Totals (keyed off dayKey, pure functions off state) ----------
+  function categoryById(id){
+    var cats = getState().categories;
+    for (var i=0;i<cats.length;i++) if (cats[i].id === id) return cats[i];
+    return null;
+  }
+
+  function sortedCategories(){
+    return getState().categories.slice().sort(function(a,b){ return a.order - b.order; });
+  }
+
+  // returns all sessions "effective" for a given day, including a virtual session
+  // for the currently running timer (clipped to now) if it started that day or is ongoing into that day.
+  function sessionsForDay(key){
+    var st = getState();
+    var list = [];
+    st.sessions.forEach(function(s){
+      if (dayKey(s.start) === key) list.push(s);
+    });
+    // virtual running session, only shown for "today" of its start
+    if (st.running) {
+      var runStart = st.running.startedAt;
+      var runKey = dayKey(runStart);
+      if (runKey === key) {
+        var now = Date.now();
+        var mins = (now - runStart) / 60000;
+        list.push({
+          id: "__running__",
+          catId: st.running.catId,
+          start: runStart,
+          minutes: mins,
+          note: "",
+          _running: true
+        });
+      }
+    }
+    return list;
+  }
+
+  function callsForDay(key){
+    return getState().calls.filter(function(c){ return dayKey(c.ts) === key; });
+  }
+
+  function incomeForDay(key){
+    return getState().income.filter(function(i){ return dayKey(i.ts) === key; });
+  }
+
+  function totalsFor(key){
+    var sessions = sessionsForDay(key);
+    var totalMin = 0, revMin = 0;
+    var perCat = {};
+    sessions.forEach(function(s){
+      var cat = categoryById(s.catId);
+      var isRev = cat ? !!cat.revenue : false;
+      totalMin += s.minutes;
+      if (isRev) revMin += s.minutes;
+      perCat[s.catId] = (perCat[s.catId] || 0) + s.minutes;
+    });
+    var pct = totalMin > 0 ? (revMin / totalMin) * 100 : 0;
+    var calls = callsForDay(key);
+    var income = incomeForDay(key);
+    var incomeTotal = income.reduce(function(sum, r){ return sum + r.amount; }, 0);
+    return {
+      totalMin: totalMin,
+      revMin: revMin,
+      pct: pct,
+      perCat: perCat,
+      callsCount: calls.length,
+      incomeTotal: incomeTotal
+    };
+  }
+
+  function rolling7DayPct(){
+    var today = todayKey();
+    var totalMin = 0, revMin = 0;
+    for (var i=0;i<7;i++){
+      var key = addDays(today, -i);
+      var t = totalsFor(key);
+      totalMin += t.totalMin;
+      revMin += t.revMin;
+    }
+    return totalMin > 0 ? (revMin/totalMin)*100 : 0;
+  }
+
+  function allTimeIncome(){
+    return getState().income.reduce(function(sum, r){ return sum + r.amount; }, 0);
+  }
+
+  // ---------- Timer control ----------
+  function startTimer(catId){
+    mutate(function(state){
+      if (state.running) {
+        stopRunningInternal(state);
+      }
+      state.running = { catId: catId, startedAt: Date.now() };
+    });
+    scheduleTick();
+  }
+
+  function stopRunningInternal(state){
+    if (!state.running) return;
+    var start = state.running.startedAt;
+    var end = Date.now();
+    var minutes = (end - start) / 60000;
+    if ((end - start) / 1000 >= MIN_SESSION_SEC) {
+      state.sessions.push({
+        id: uid(),
+        catId: state.running.catId,
+        start: start,
+        minutes: minutes,
+        note: ""
+      });
+    }
+    state.running = null;
+  }
+
+  function stopTimer(){
+    mutate(function(state){
+      stopRunningInternal(state);
+    });
+  }
+
+  // ---------- Ticking (re-render while a timer runs) ----------
+  var tickInterval = null;
+  function scheduleTick(){
+    if (tickInterval) return;
+    tickInterval = setInterval(function(){
+      if (getState().running && currentView === "today") {
+        renderTimers();
+      } else if (!getState().running) {
+        clearInterval(tickInterval);
+        tickInterval = null;
+      }
+    }, 1000);
+  }
+
+  document.addEventListener("visibilitychange", function(){
+    if (!document.hidden) {
+      render();
+      if (getState().running) scheduleTick();
+    }
+  });
+
+  // ---------- View state ----------
+  var currentView = "today";
+  var historyDayKey = todayKey();
+
+  function switchView(v){
+    currentView = v;
+    document.getElementById("tab-today").classList.toggle("active", v==="today");
+    document.getElementById("tab-history").classList.toggle("active", v==="history");
+    document.getElementById("tab-categories").classList.toggle("active", v==="categories");
+    render();
+  }
+
+  document.getElementById("tab-today").addEventListener("click", function(){ switchView("today"); });
+  document.getElementById("tab-history").addEventListener("click", function(){ historyDayKey = todayKey(); switchView("history"); });
+  document.getElementById("tab-categories").addEventListener("click", function(){ switchView("categories"); });
+
+  // ---------- Rendering ----------
+  var root = document.getElementById("view-root");
+  var modalRoot = document.getElementById("modal-root");
+
+  function el(tag, attrs, children){
+    var e = document.createElement(tag);
+    if (attrs) {
+      for (var k in attrs) {
+        if (k === "class") e.className = attrs[k];
+        else if (k === "html") e.innerHTML = attrs[k];
+        else if (k.indexOf("data-") === 0) e.setAttribute(k, attrs[k]);
+        else e[k] = attrs[k];
+      }
+    }
+    if (children) {
+      children.forEach(function(c){
+        if (c == null) return;
+        if (typeof c === "string") e.appendChild(document.createTextNode(c));
+        else e.appendChild(c);
+      });
+    }
+    return e;
+  }
+
+  function escapeHtml(s){
+    var d = document.createElement("div");
+    d.textContent = s == null ? "" : String(s);
+    return d.innerHTML;
+  }
+
+  function render(){
+    if (currentView === "today") renderToday();
+    else if (currentView === "history") renderHistory();
+    else renderCategories();
+  }
+
+  // ===== TODAY VIEW =====
+  function renderToday(){
+    root.innerHTML = "";
+    var key = todayKey();
+    var t = totalsFor(key);
+    var roll7 = rolling7DayPct();
+
+    root.appendChild(buildGauge(t, roll7));
+
+    root.appendChild(el("div", { class: "section-title" }, ["Timers"]));
+    var timerGrid = el("div", { class: "timer-grid", id: "timer-grid" });
+    sortedCategories().forEach(function(cat){
+      timerGrid.appendChild(buildTimerCard(cat, t));
+    });
+    root.appendChild(timerGrid);
+
+    root.appendChild(el("div", { class: "section-title" }, ["Quick Add"]));
+    root.appendChild(buildQuickAddCard());
+
+    root.appendChild(el("div", { class: "section-title" }, ["Calls & Income"]));
+    root.appendChild(buildCallsIncomeCard(t));
+
+    root.appendChild(el("div", { class: "section-title" }, ["Today's Log"]));
+    root.appendChild(buildHistoryList(key));
+
+    if (getState().running) scheduleTick();
+  }
+
+  function renderTimers(){
+    // lightweight refresh of just the timer grid + gauge, called every second
+    var key = todayKey();
+    var t = totalsFor(key);
+    var gaugeCard = document.getElementById("gauge-card");
+    if (gaugeCard) {
+      var roll7 = rolling7DayPct();
+      var replacement = buildGauge(t, roll7);
+      gaugeCard.replaceWith(replacement);
+    }
+    var grid = document.getElementById("timer-grid");
+    if (grid) {
+      grid.innerHTML = "";
+      sortedCategories().forEach(function(cat){
+        grid.appendChild(buildTimerCard(cat, t));
+      });
+    }
+  }
+
+  function buildGauge(t, roll7){
+    var card = el("div", { class: "card gauge-card", id: "gauge-card" });
+    card.appendChild(el("div", { class: "gauge-label" }, ["Revenue-facing today"]));
+    card.appendChild(el("div", { class: "gauge-pct num" }, [Math.round(t.pct) + "%"]));
+    var track = el("div", { class: "gauge-bar-track" });
+    track.appendChild(el("div", { class: "gauge-bar-fill", style: "width:" + Math.min(100, t.pct) + "%" }));
+    card.appendChild(track);
+    var sub = el("div", { class: "gauge-sub" }, [
+      el("span", null, [el("span", { class: "val num" }, [fmtMinutes(t.revMin)]), " / " + fmtMinutes(t.totalMin) + " min"]),
+      el("span", null, ["7-day: ", el("span", { class: "val num" }, [Math.round(roll7) + "%"])])
+    ]);
+    card.appendChild(sub);
+    return card;
+  }
+
+  function buildTimerCard(cat, todayTotals){
+    var state = getState();
+    var isRunning = state.running && state.running.catId === cat.id;
+    var card = el("div", { class: "card timer-card" + (isRunning ? " running" : "") });
+    card.appendChild(el("div", { class: "lamp" }));
+
+    var info = el("div", { class: "timer-info" });
+    var nameRow = el("div", { class: "timer-name" }, [
+      cat.revenue ? el("span", { class: "rev-badge", title: "Revenue" }) : null,
+      document.createTextNode(cat.name)
+    ]);
+    info.appendChild(nameRow);
+
+    var mins = todayTotals.perCat[cat.id] || 0;
+    var meta = el("div", { class: "timer-meta num" }, [fmtMinutes(mins) + " today"]);
+    info.appendChild(meta);
+
+    if (isRunning) {
+      var elapsedMs = Date.now() - state.running.startedAt;
+      var elapsedEl = el("div", { class: "timer-elapsed num" }, [fmtElapsed(elapsedMs)]);
+      info.appendChild(elapsedEl);
+      if (elapsedMs > LONG_TIMER_WARN_MS) {
+        info.appendChild(el("div", { class: "timer-warn" }, ["Running a while — consider stopping or trimming."]));
+      }
+    }
+
+    card.appendChild(info);
+
+    var btn = el("button", { class: "timer-btn " + (isRunning ? "stop" : "start") }, [isRunning ? "Stop" : "Start"]);
+    btn.addEventListener("click", function(){
+      if (isRunning) stopTimer();
+      else startTimer(cat.id);
+    });
+    card.appendChild(btn);
+
+    return card;
+  }
+
+  function buildQuickAddCard(){
+    var card = el("div", { class: "card" });
+    var catField = el("div", { class: "field" });
+    catField.appendChild(el("label", null, ["Category"]));
+    var select = el("select", { id: "qa-cat" });
+    sortedCategories().forEach(function(cat){
+      select.appendChild(el("option", { value: cat.id }, [cat.name]));
+    });
+    catField.appendChild(select);
+    card.appendChild(catField);
+
+    var minField = el("div", { class: "field" });
+    minField.appendChild(el("label", null, ["Minutes"]));
+    var minInput = el("input", { type: "number", inputMode: "numeric", min: "1", step: "1", id: "qa-min", placeholder: "e.g. 45" });
+    minField.appendChild(minInput);
+    card.appendChild(minField);
+
+    var noteField = el("div", { class: "field" });
+    noteField.appendChild(el("label", null, ["Note (optional)"]));
+    var noteInput = el("input", { type: "text", id: "qa-note", placeholder: "What was it?" });
+    noteField.appendChild(noteInput);
+    card.appendChild(noteField);
+
+    var btn = el("button", { class: "btn block" }, ["Add Session"]);
+    btn.addEventListener("click", function(){
+      var catId = select.value;
+      var mins = parseFloat(minInput.value);
+      if (!catId || !mins || mins <= 0) return;
+      mutate(function(state){
+        state.sessions.push({
+          id: uid(),
+          catId: catId,
+          start: Date.now(),
+          minutes: mins,
+          note: noteInput.value.trim()
+        });
+      });
+      minInput.value = "";
+      noteInput.value = "";
+    });
+    card.appendChild(btn);
+    return card;
+  }
+
+  function buildCallsIncomeCard(t){
+    var wrap = el("div");
+
+    var statRow = el("div", { class: "stat-row" });
+    statRow.appendChild(el("div", { class: "card stat-card" }, [
+      el("div", { class: "big num" }, [String(t.callsCount)]),
+      el("div", { class: "label" }, ["Calls today"])
+    ]));
+    statRow.appendChild(el("div", { class: "card stat-card" }, [
+      el("div", { class: "big num" }, [fmtMoney(t.incomeTotal)]),
+      el("div", { class: "label" }, ["Income today"])
+    ]));
+    wrap.appendChild(statRow);
+
+    var allTime = allTimeIncome();
+    wrap.appendChild(el("div", { class: "gauge-sub", style: "margin: 6px 0 12px; color: var(--bone); opacity:0.85;" }, [
+      "All-time income: " + fmtMoney(allTime)
+    ]));
+
+    var card = el("div", { class: "card" });
+    var callBtn = el("button", { class: "call-btn" }, ["+1 Call"]);
+    callBtn.addEventListener("click", function(){
+      mutate(function(state){
+        state.calls.push({ id: uid(), ts: Date.now(), note: "" });
+      });
+    });
+    card.appendChild(callBtn);
+    wrap.appendChild(card);
+
+    var incCard = el("div", { class: "card" });
+    var amtField = el("div", { class: "field" });
+    amtField.appendChild(el("label", null, ["Income amount"]));
+    var amtInput = el("input", { type: "text", inputMode: "decimal", class: "mono", id: "inc-amt", placeholder: "e.g. 1250.50" });
+    amtField.appendChild(amtInput);
+    incCard.appendChild(amtField);
+
+    var incNoteField = el("div", { class: "field" });
+    incNoteField.appendChild(el("label", null, ["Note (optional)"]));
+    var incNoteInput = el("input", { type: "text", id: "inc-note", placeholder: "Client / source" });
+    incNoteField.appendChild(incNoteInput);
+    incCard.appendChild(incNoteField);
+
+    var addIncBtn = el("button", { class: "btn block" }, ["Log Income"]);
+    addIncBtn.addEventListener("click", function(){
+      var raw = amtInput.value.trim();
+      var amount = parseFloat(raw);
+      if (raw === "" || isNaN(amount)) return;
+      mutate(function(state){
+        state.income.push({ id: uid(), ts: Date.now(), amount: amount, note: incNoteInput.value.trim() });
+      });
+      amtInput.value = "";
+      incNoteInput.value = "";
+    });
+    incCard.appendChild(addIncBtn);
+    wrap.appendChild(incCard);
+
+    return wrap;
+  }
+
+  // ===== Merged history list for a given day =====
+  function buildHistoryList(key){
+    var card = el("div", { class: "card" });
+    var sessions = sessionsForDay(key).filter(function(s){ return !s._running; });
+    var calls = callsForDay(key);
+    var income = incomeForDay(key);
+
+    var items = [];
+    sessions.forEach(function(s){
+      items.push({ type: "session", ts: s.start, data: s });
+    });
+    calls.forEach(function(c){
+      items.push({ type: "call", ts: c.ts, data: c });
+    });
+    income.forEach(function(i){
+      items.push({ type: "income", ts: i.ts, data: i });
+    });
+    items.sort(function(a,b){ return b.ts - a.ts; });
+
+    if (items.length === 0) {
+      card.appendChild(el("div", { class: "empty-state" }, ["Nothing logged yet."]));
+      return card;
+    }
+
+    items.forEach(function(item){
+      card.appendChild(buildHistoryItem(item));
+    });
+    return card;
+  }
+
+  function timeLabel(ts){
+    var d = new Date(ts);
+    var h = d.getHours();
+    var m = d.getMinutes();
+    var ampm = h >= 12 ? "PM" : "AM";
+    var h12 = h % 12; if (h12 === 0) h12 = 12;
+    return h12 + ":" + pad(m) + " " + ampm;
+  }
+
+  function buildHistoryItem(item){
+    var row = el("div", { class: "hist-item" });
+    var icon, title, meta, note;
+
+    if (item.type === "session") {
+      var s = item.data;
+      var cat = categoryById(s.catId);
+      var isRev = cat ? cat.revenue : false;
+      icon = el("div", { class: "hist-icon" + (isRev ? " rev" : "") }, ["T"]);
+      title = el("div", { class: "hist-title" }, [
+        el("span", null, [cat ? cat.name : "(deleted)"]),
+        el("span", { class: "amt num" }, [fmtMinutes(s.minutes)])
+      ]);
+      meta = el("div", { class: "hist-meta" }, [timeLabel(s.start)]);
+      note = s.note ? el("div", { class: "hist-note" }, [escapeText(s.note)]) : null;
+    } else if (item.type === "call") {
+      var c = item.data;
+      icon = el("div", { class: "hist-icon" }, ["C"]);
+      title = el("div", { class: "hist-title" }, [el("span", null, ["Call logged"])]);
+      meta = el("div", { class: "hist-meta" }, [timeLabel(c.ts)]);
+      note = c.note ? el("div", { class: "hist-note" }, [escapeText(c.note)]) : null;
+    } else {
+      var inc = item.data;
+      icon = el("div", { class: "hist-icon rev" }, ["$"]);
+      title = el("div", { class: "hist-title" }, [
+        el("span", null, ["Income"]),
+        el("span", { class: "amt num" }, [fmtMoney(inc.amount)])
+      ]);
+      meta = el("div", { class: "hist-meta" }, [timeLabel(inc.ts)]);
+      note = inc.note ? el("div", { class: "hist-note" }, [escapeText(inc.note)]) : null;
+    }
+
+    var body = el("div", { class: "hist-body" }, [title, meta, note]);
+    row.appendChild(icon);
+    row.appendChild(body);
+
+    var actions = el("div", { class: "hist-actions" });
+    var editBtn = el("button", { class: "icon-btn", title: "Edit" }, ["✎"]);
+    editBtn.addEventListener("click", function(){ openEditModal(item); });
+    var delBtn = el("button", { class: "icon-btn", title: "Delete" }, ["🗑"]);
+    delBtn.addEventListener("click", function(){ deleteItem(item); });
+    actions.appendChild(editBtn);
+    actions.appendChild(delBtn);
+    row.appendChild(actions);
+
+    return row;
+  }
+
+  function escapeText(s){
+    return s; // textContent-based el() already escapes since we pass as string node
+  }
+
+  function deleteItem(item){
+    mutate(function(state){
+      if (item.type === "session") {
+        state.sessions = state.sessions.filter(function(s){ return s.id !== item.data.id; });
+      } else if (item.type === "call") {
+        state.calls = state.calls.filter(function(c){ return c.id !== item.data.id; });
+      } else if (item.type === "income") {
+        state.income = state.income.filter(function(i){ return i.id !== item.data.id; });
+      }
+    });
+  }
+
+  // ===== Edit modal =====
+  function openEditModal(item){
+    modalRoot.innerHTML = "";
+    var overlay = el("div", { class: "modal-overlay" });
+    var sheet = el("div", { class: "modal-sheet" });
+
+    if (item.type === "session") {
+      var s = item.data;
+      sheet.appendChild(el("h2", null, ["Edit Session"]));
+
+      var catField = el("div", { class: "field" });
+      catField.appendChild(el("label", null, ["Category"]));
+      var select = el("select");
+      sortedCategories().forEach(function(cat){
+        var opt = el("option", { value: cat.id }, [cat.name]);
+        if (cat.id === s.catId) opt.selected = true;
+        select.appendChild(opt);
+      });
+      catField.appendChild(select);
+      sheet.appendChild(catField);
+
+      var dtField = el("div", { class: "field" });
+      dtField.appendChild(el("label", null, ["Start time"]));
+      var dtInput = el("input", { type: "datetime-local", value: fmtDateTimeLocal(s.start) });
+      dtField.appendChild(dtInput);
+      sheet.appendChild(dtField);
+
+      var minField = el("div", { class: "field" });
+      minField.appendChild(el("label", null, ["Minutes"]));
+      var minInput = el("input", { type: "number", class: "mono", min: "1", step: "1", value: Math.round(s.minutes) });
+      minField.appendChild(minInput);
+      sheet.appendChild(minField);
+
+      var noteField = el("div", { class: "field" });
+      noteField.appendChild(el("label", null, ["Note"]));
+      var noteInput = el("input", { type: "text", value: s.note || "" });
+      noteField.appendChild(noteInput);
+      sheet.appendChild(noteField);
+
+      var row = el("div", { class: "btn-row" });
+      var saveBtn = el("button", { class: "btn" }, ["Save"]);
+      saveBtn.addEventListener("click", function(){
+        var newMins = parseFloat(minInput.value);
+        if (!newMins || newMins <= 0) return;
+        mutate(function(state){
+          var target = state.sessions.find(function(x){ return x.id === s.id; });
+          if (target) {
+            target.catId = select.value;
+            target.start = parseDateTimeLocal(dtInput.value);
+            target.minutes = newMins;
+            target.note = noteInput.value.trim();
+          }
+        });
+        closeModal();
+      });
+      var cancelBtn = el("button", { class: "btn secondary" }, ["Cancel"]);
+      cancelBtn.addEventListener("click", closeModal);
+      row.appendChild(saveBtn);
+      row.appendChild(cancelBtn);
+      sheet.appendChild(row);
+
+    } else if (item.type === "call") {
+      var c = item.data;
+      sheet.appendChild(el("h2", null, ["Edit Call"]));
+
+      var dtField2 = el("div", { class: "field" });
+      dtField2.appendChild(el("label", null, ["Time"]));
+      var dtInput2 = el("input", { type: "datetime-local", value: fmtDateTimeLocal(c.ts) });
+      dtField2.appendChild(dtInput2);
+      sheet.appendChild(dtField2);
+
+      var noteField2 = el("div", { class: "field" });
+      noteField2.appendChild(el("label", null, ["Note"]));
+      var noteInput2 = el("input", { type: "text", value: c.note || "" });
+      noteField2.appendChild(noteInput2);
+      sheet.appendChild(noteField2);
+
+      var row2 = el("div", { class: "btn-row" });
+      var saveBtn2 = el("button", { class: "btn" }, ["Save"]);
+      saveBtn2.addEventListener("click", function(){
+        mutate(function(state){
+          var target = state.calls.find(function(x){ return x.id === c.id; });
+          if (target) {
+            target.ts = parseDateTimeLocal(dtInput2.value);
+            target.note = noteInput2.value.trim();
+          }
+        });
+        closeModal();
+      });
+      var cancelBtn2 = el("button", { class: "btn secondary" }, ["Cancel"]);
+      cancelBtn2.addEventListener("click", closeModal);
+      row2.appendChild(saveBtn2);
+      row2.appendChild(cancelBtn2);
+      sheet.appendChild(row2);
+
+    } else {
+      var inc = item.data;
+      sheet.appendChild(el("h2", null, ["Edit Income"]));
+
+      var dtField3 = el("div", { class: "field" });
+      dtField3.appendChild(el("label", null, ["Time"]));
+      var dtInput3 = el("input", { type: "datetime-local", value: fmtDateTimeLocal(inc.ts) });
+      dtField3.appendChild(dtInput3);
+      sheet.appendChild(dtField3);
+
+      var amtField = el("div", { class: "field" });
+      amtField.appendChild(el("label", null, ["Amount"]));
+      var amtInput = el("input", { type: "text", inputMode: "decimal", class: "mono", value: String(inc.amount) });
+      amtField.appendChild(amtInput);
+      sheet.appendChild(amtField);
+
+      var noteField3 = el("div", { class: "field" });
+      noteField3.appendChild(el("label", null, ["Note"]));
+      var noteInput3 = el("input", { type: "text", value: inc.note || "" });
+      noteField3.appendChild(noteInput3);
+      sheet.appendChild(noteField3);
+
+      var row3 = el("div", { class: "btn-row" });
+      var saveBtn3 = el("button", { class: "btn" }, ["Save"]);
+      saveBtn3.addEventListener("click", function(){
+        var amt = parseFloat(amtInput.value);
+        if (isNaN(amt)) return;
+        mutate(function(state){
+          var target = state.income.find(function(x){ return x.id === inc.id; });
+          if (target) {
+            target.ts = parseDateTimeLocal(dtInput3.value);
+            target.amount = amt;
+            target.note = noteInput3.value.trim();
+          }
+        });
+        closeModal();
+      });
+      var cancelBtn3 = el("button", { class: "btn secondary" }, ["Cancel"]);
+      cancelBtn3.addEventListener("click", closeModal);
+      row3.appendChild(saveBtn3);
+      row3.appendChild(cancelBtn3);
+      sheet.appendChild(row3);
+    }
+
+    overlay.appendChild(sheet);
+    overlay.addEventListener("click", function(e){
+      if (e.target === overlay) closeModal();
+    });
+    modalRoot.appendChild(overlay);
+  }
+
+  function closeModal(){
+    modalRoot.innerHTML = "";
+  }
+
+  // ===== HISTORY VIEW =====
+  function renderHistory(){
+    root.innerHTML = "";
+    var t = totalsFor(historyDayKey);
+    var roll7 = rolling7DayPct();
+
+    var nav = el("div", { class: "day-nav" });
+    var prevBtn = el("button", null, ["‹"]);
+    prevBtn.addEventListener("click", function(){
+      historyDayKey = addDays(historyDayKey, -1);
+      renderHistory();
+    });
+    var label = el("div", { class: "day-label" }, [keyToLabel(historyDayKey)]);
+    var nextBtn = el("button", null, ["›"]);
+    var isToday = historyDayKey === todayKey();
+    nextBtn.disabled = isToday;
+    nextBtn.addEventListener("click", function(){
+      if (historyDayKey !== todayKey()) {
+        historyDayKey = addDays(historyDayKey, 1);
+        renderHistory();
+      }
+    });
+    nav.appendChild(prevBtn);
+    nav.appendChild(label);
+    nav.appendChild(nextBtn);
+    root.appendChild(nav);
+
+    root.appendChild(buildGaugeStatic(t, roll7, historyDayKey === todayKey() ? roll7 : null));
+
+    var statRow = el("div", { class: "stat-row" });
+    statRow.appendChild(el("div", { class: "card stat-card" }, [
+      el("div", { class: "big num" }, [String(t.callsCount)]),
+      el("div", { class: "label" }, ["Calls"])
+    ]));
+    statRow.appendChild(el("div", { class: "card stat-card" }, [
+      el("div", { class: "big num" }, [fmtMoney(t.incomeTotal)]),
+      el("div", { class: "label" }, ["Income"])
+    ]));
+    root.appendChild(statRow);
+
+    root.appendChild(el("div", { class: "section-title" }, ["Log"]));
+    root.appendChild(buildHistoryList(historyDayKey));
+
+    // 90-day back limit note (soft) - allow going back further but label works regardless
+  }
+
+  function buildGaugeStatic(t, roll7){
+    var card = el("div", { class: "card gauge-card" });
+    card.appendChild(el("div", { class: "gauge-label" }, ["Revenue-facing"]));
+    card.appendChild(el("div", { class: "gauge-pct num" }, [Math.round(t.pct) + "%"]));
+    var track = el("div", { class: "gauge-bar-track" });
+    track.appendChild(el("div", { class: "gauge-bar-fill", style: "width:" + Math.min(100, t.pct) + "%" }));
+    card.appendChild(track);
+    var sub = el("div", { class: "gauge-sub" }, [
+      el("span", null, [el("span", { class: "val num" }, [fmtMinutes(t.revMin)]), " / " + fmtMinutes(t.totalMin) + " min"]),
+      el("span", null, ["7-day (from today): ", el("span", { class: "val num" }, [Math.round(roll7) + "%"])])
+    ]);
+    card.appendChild(sub);
+    return card;
+  }
+
+  // ===== CATEGORIES VIEW =====
+  function renderCategories(){
+    root.innerHTML = "";
+    var card = el("div", { class: "card" });
+    var cats = sortedCategories();
+
+    cats.forEach(function(cat, idx){
+      var row = el("div", { class: "cat-row" });
+
+      var orderBtns = el("div", { class: "order-btns" });
+      var upBtn = el("button", null, ["▲"]);
+      upBtn.disabled = idx === 0;
+      upBtn.addEventListener("click", function(){ moveCategory(cat.id, -1); });
+      var downBtn = el("button", null, ["▼"]);
+      downBtn.disabled = idx === cats.length - 1;
+      downBtn.addEventListener("click", function(){ moveCategory(cat.id, 1); });
+      orderBtns.appendChild(upBtn);
+      orderBtns.appendChild(downBtn);
+      row.appendChild(orderBtns);
+
+      var nameInput = el("input", { type: "text", value: cat.name });
+      nameInput.addEventListener("change", function(){
+        var v = nameInput.value.trim();
+        if (!v) { nameInput.value = cat.name; return; }
+        mutate(function(state){
+          var target = state.categories.find(function(c){ return c.id === cat.id; });
+          if (target) target.name = v;
+        });
+      });
+      row.appendChild(nameInput);
+
+      var revLabel = el("label", { class: "rev-toggle" });
+      var revCheck = el("input", { type: "checkbox", checked: cat.revenue });
+      revCheck.addEventListener("change", function(){
+        mutate(function(state){
+          var target = state.categories.find(function(c){ return c.id === cat.id; });
+          if (target) target.revenue = revCheck.checked;
+        });
+      });
+      revLabel.appendChild(revCheck);
+      revLabel.appendChild(document.createTextNode("Rev"));
+      row.appendChild(revLabel);
+
+      var delBtn = el("button", { class: "icon-btn" }, ["🗑"]);
+      delBtn.addEventListener("click", function(){ requestDeleteCategory(cat.id); });
+      row.appendChild(delBtn);
+
+      card.appendChild(row);
+    });
+
+    root.appendChild(el("div", { class: "section-title" }, ["Categories"]));
+    root.appendChild(card);
+
+    var addCard = el("div", { class: "card" });
+    var addField = el("div", { class: "field" });
+    var addInput = el("input", { type: "text", placeholder: "New category name" });
+    addField.appendChild(addInput);
+    addCard.appendChild(addField);
+    var addBtn = el("button", { class: "btn block" }, ["Add Category"]);
+    addBtn.addEventListener("click", function(){
+      var v = addInput.value.trim();
+      if (!v) return;
+      mutate(function(state){
+        var maxOrder = state.categories.reduce(function(m,c){ return Math.max(m, c.order); }, -1);
+        state.categories.push({ id: uid(), name: v, revenue: false, order: maxOrder + 1 });
+      });
+      addInput.value = "";
+    });
+    addCard.appendChild(addBtn);
+    root.appendChild(addCard);
+  }
+
+  function moveCategory(id, dir){
+    mutate(function(state){
+      var cats = state.categories.slice().sort(function(a,b){ return a.order - b.order; });
+      var idx = cats.findIndex(function(c){ return c.id === id; });
+      var swapIdx = idx + dir;
+      if (swapIdx < 0 || swapIdx >= cats.length) return;
+      var tmp = cats[idx].order;
+      cats[idx].order = cats[swapIdx].order;
+      cats[swapIdx].order = tmp;
+    });
+  }
+
+  function requestDeleteCategory(id){
+    var state = getState();
+    if (state.categories.length <= 1) return; // never delete last one
+    var hasSessions = state.sessions.some(function(s){ return s.catId === id; }) ||
+      (state.running && state.running.catId === id);
+
+    if (!hasSessions) {
+      mutate(function(st){
+        st.categories = st.categories.filter(function(c){ return c.id !== id; });
+      });
+      return;
+    }
+
+    // confirmation required: cascade delete (sessions under this category are removed)
+    modalRoot.innerHTML = "";
+    var overlay = el("div", { class: "modal-overlay" });
+    var sheet = el("div", { class: "modal-sheet" });
+    sheet.appendChild(el("h2", null, ["Delete Category"]));
+    var cat = categoryById(id);
+    sheet.appendChild(el("p", null, [
+      "\"" + (cat ? cat.name : "") + "\" has logged sessions. Deleting it will also delete all of its sessions (cascade). This cannot be undone."
+    ]));
+    if (state.running && state.running.catId === id) {
+      sheet.appendChild(el("p", null, ["Its running timer will be discarded."]));
+    }
+    var row = el("div", { class: "btn-row" });
+    var confirmBtn = el("button", { class: "btn danger" }, ["Delete & Cascade"]);
+    confirmBtn.addEventListener("click", function(){
+      mutate(function(st){
+        if (st.running && st.running.catId === id) st.running = null;
+        st.sessions = st.sessions.filter(function(s){ return s.catId !== id; });
+        st.categories = st.categories.filter(function(c){ return c.id !== id; });
+      });
+      closeModal();
+    });
+    var cancelBtn = el("button", { class: "btn secondary" }, ["Cancel"]);
+    cancelBtn.addEventListener("click", closeModal);
+    row.appendChild(confirmBtn);
+    row.appendChild(cancelBtn);
+    sheet.appendChild(row);
+    overlay.appendChild(sheet);
+    overlay.addEventListener("click", function(e){ if (e.target === overlay) closeModal(); });
+    modalRoot.appendChild(overlay);
+  }
+
+  // ===== Export / Import =====
+  document.getElementById("btn-export").addEventListener("click", function(){
+    var data = JSON.stringify(getState(), null, 2);
+    var blob = new Blob([data], { type: "application/json" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    var d = new Date();
+    a.download = "tracker-export-" + d.getFullYear() + pad(d.getMonth()+1) + pad(d.getDate()) + ".json";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+  });
+
+  document.getElementById("btn-import").addEventListener("click", function(){
+    document.getElementById("file-import").click();
+  });
+
+  document.getElementById("file-import").addEventListener("change", function(e){
+    var file = e.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(){
+      try {
+        var parsed = JSON.parse(reader.result);
+        if (!parsed || typeof parsed !== "object" || !Array.isArray(parsed.categories)) {
+          alert("Invalid tracker export file.");
+          return;
+        }
+        parsed.sessions = Array.isArray(parsed.sessions) ? parsed.sessions : [];
+        parsed.calls = Array.isArray(parsed.calls) ? parsed.calls : [];
+        parsed.income = Array.isArray(parsed.income) ? parsed.income : [];
+        parsed.running = parsed.running && typeof parsed.running === "object" ? parsed.running : null;
+        _state = parsed;
+        persistNow();
+        render();
+      } catch (err) {
+        alert("Could not parse that file as JSON.");
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  });
+
+  // ---------- Boot ----------
+  _state = loadState();
+  persistNow();
+  render();
+  if (getState().running) scheduleTick();
+
+})();
+</script>
+</body>
+</html>
