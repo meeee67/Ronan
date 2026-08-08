@@ -1,0 +1,9 @@
+{
+  "servers": [
+    {
+      "name": "ronan-tracker",
+      "url": "https://your-tracker-mcp-host/mcp",
+      "token": "paste the token mcp-server printed on first run"
+    }
+  ]
+}

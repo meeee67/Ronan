@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Home</title>
+<style>
+  :root {
+    --green: #26332B;
+    --green-2: #2f3f35;
+    --bone: #E7E3D6;
+    --bone-2: #d9d4c3;
+    --amber: #F2A007;
+    --oxide: #A8412A;
+    --ink: #1c221d;
+    --ink-soft: #4a5148;
+    --line: #b9b3a0;
+    --danger: #A8412A;
+    --ok: #3f6b4a;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--green);
+    color: var(--bone);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    padding: 12px 12px calc(env(safe-area-inset-bottom, 0) + 24px);
+    max-width: 640px;
+    margin: 0 auto;
+    min-height: 100vh;
+  }
+
+  h1, h2, .label { font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700; }
+
+  button { font-family: inherit; cursor: pointer; }
+  button:focus-visible, a:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--amber); outline-offset: 2px; }
+
+  .topbar { display: flex; align-items: center; justify-content: space-between; padding: 10px 2px 6px; }
+  .topbar h1 { font-size: 22px; margin: 0; }
+  .topbar h1 .dot { color: var(--amber); }
+  .topbar-right { display: flex; align-items: center; gap: 10px; }
+
+  .status { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--bone-2); }
+  .status .lamp { width: 9px; height: 9px; border-radius: 50%; background: var(--danger); flex-shrink: 0; }
+  .status.online .lamp { background: var(--ok); }
+  .status.connecting .lamp { background: var(--amber); animation: pulse 1.2s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { opacity: 0.4; } 50% { opacity: 1; } }
+
+  .icon-btn { background: transparent; border: 2px solid var(--bone-2); color: var(--bone); border-radius: 6px; min-width: 40px; min-height: 40px; font-size: 16px; }
+
+  .card { background: var(--bone); color: var(--ink); border-radius: 8px; padding: 14px; margin-bottom: 12px; box-shadow: 0 2px 0 rgba(0,0,0,0.25); border: 1px solid rgba(0,0,0,0.15); }
+  .card h2 { font-size: 15px; margin: 0 0 8px; color: var(--ink); display: flex; align-items: center; justify-content: space-between; }
+  .card .body { font-size: 15px; line-height: 1.5; white-space: pre-wrap; min-height: 24px; }
+  .card .body.muted { color: var(--ink-soft); font-style: italic; }
+  .refresh-btn { background: transparent; border: none; color: var(--oxide); font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+  .refresh-btn:disabled { opacity: 0.4; }
+
+  .toggle-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .toggle-row .label { font-size: 13px; color: var(--ink-soft); text-transform: none; letter-spacing: normal; font-weight: 500; font-family: inherit; }
+  .switch { position: relative; width: 42px; height: 24px; flex-shrink: 0; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .switch .track { position: absolute; inset: 0; background: var(--bone-2); border-radius: 12px; transition: 0.15s; }
+  .switch .track:before { content: ""; position: absolute; width: 18px; height: 18px; left: 3px; top: 3px; background: var(--ink); border-radius: 50%; transition: 0.15s; }
+  .switch input:checked + .track { background: var(--ok); }
+  .switch input:checked + .track:before { transform: translateX(18px); background: #fff; }
+
+  .nav-grid { display: flex; gap: 10px; margin-bottom: 12px; }
+  .nav-card { flex: 1; background: var(--bone); color: var(--ink); border-radius: 8px; padding: 16px 12px; text-align: center; text-decoration: none; box-shadow: 0 2px 0 rgba(0,0,0,0.25); border: 1px solid rgba(0,0,0,0.15); }
+  .nav-card .big-icon { font-size: 26px; display: block; margin-bottom: 6px; }
+  .nav-card .nav-label { font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; }
+  .nav-card .nav-sub { font-size: 11px; color: var(--ink-soft); margin-top: 2px; }
+
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: flex; align-items: flex-end; z-index: 20; }
+  .modal-sheet { background: var(--bone); color: var(--ink); width: 100%; max-width: 640px; margin: 0 auto; border-radius: 14px 14px 0 0; padding: 16px 16px calc(env(safe-area-inset-bottom, 0) + 16px); max-height: 85vh; overflow-y: auto; }
+  .modal-sheet h2 { font-size: 18px; margin: 0 0 12px; color: var(--ink); }
+  .field { margin-bottom: 12px; }
+  .field label { display: block; font-size: 12px; color: var(--ink-soft); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .field input[type=text], .field input[type=password] { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--line); font-size: 15px; background: #fff; color: var(--ink); }
+  .note { font-size: 12px; color: var(--ink-soft); margin: -6px 0 12px; }
+  .modal-actions { display: flex; gap: 8px; margin-top: 8px; }
+  .modal-actions button { flex: 1; min-height: 44px; border-radius: 8px; border: none; font-size: 15px; font-weight: 600; }
+  .btn-primary { background: var(--oxide); color: var(--bone); }
+  .btn-secondary { background: var(--bone-2); color: var(--ink); }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>HOME<span class="dot">.</span></h1>
+  <div class="topbar-right">
+    <div class="status" id="status"><span class="lamp"></span><span id="status-text">offline</span></div>
+    <button class="icon-btn" id="btn-settings" aria-label="Settings">&#9881;</button>
+  </div>
+</div>
+
+<div class="card" id="plan-card">
+  <h2>What to do now <button class="refresh-btn" id="btn-refresh-plan">Refresh</button></h2>
+  <div class="body muted" id="plan-body">Connect to Jarvis in Settings to get today's plan.</div>
+</div>
+
+<div class="card" id="efficiency-card">
+  <h2>Laptop efficiency <button class="refresh-btn" id="btn-refresh-eff">Refresh</button></h2>
+  <div class="toggle-row">
+    <span class="label" id="onlaptop-label">I'm at my laptop right now</span>
+    <label class="switch"><input type="checkbox" id="onlaptop-toggle"><span class="track"></span></label>
+  </div>
+  <div class="body muted" id="efficiency-body">Connect to Jarvis in Settings for tailored suggestions.</div>
+</div>
+
+<div class="nav-grid">
+  <a class="nav-card" href="tracker.html">
+    <span class="big-icon">&#9201;</span>
+    <span class="nav-label">Tracker</span>
+    <div class="nav-sub">Log hours &amp; revenue</div>
+  </a>
+  <a class="nav-card" href="jarvis-phone.html">
+    <span class="big-icon">&#127908;</span>
+    <span class="nav-label">Talk to Jarvis</span>
+    <div class="nav-sub">Chat &amp; voice</div>
+  </a>
+</div>
+
+<div class="card" id="about-card">
+  <h2>How this works</h2>
+  <div class="body">Jarvis (running on your laptop, grounded in your vault, routines, and any MCP tools it's connected to — including the Tracker MCP server) answers the two panels above and the chat page over the relay. If Jarvis is offline, start jarvis.py on your laptop so it dials back into the relay.</div>
+</div>
+
+<div id="modal-root"></div>
+
+<script>
+"use strict";
+
+// Same storage key as jarvis-phone.html on purpose: set your relay/token
+// once and both pages pick it up (when served from the same origin).
+var SETTINGS_KEY = "jarvisPhone:v1:settings";
+var ONLAPTOP_KEY = "jarvisHome:v1:onLaptop";
+
+var DEFAULT_SETTINGS = {
+  relayUrl: "",
+  phoneToken: "",
+  wakePhrase: "hey jarvis",
+  speakReplies: true
+};
+
+function loadSettings() {
+  try {
+    var raw = localStorage.getItem(SETTINGS_KEY);
+    if (!raw) return Object.assign({}, DEFAULT_SETTINGS);
+    return Object.assign({}, DEFAULT_SETTINGS, JSON.parse(raw));
+  } catch (e) {
+    return Object.assign({}, DEFAULT_SETTINGS);
+  }
+}
+function saveSettings(s) {
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
+}
+var settings = loadSettings();
+
+// ===== Status (plain HTTP poll, no auth needed for /status) =====
+var statusEl = document.getElementById("status");
+var statusTextEl = document.getElementById("status-text");
+
+function httpStatusUrlFor(relayUrl) {
+  if (!relayUrl) return null;
+  var httpUrl = relayUrl.replace(/^wss:/i, "https:").replace(/^ws:/i, "http:");
+  httpUrl = httpUrl.replace(/\/ws\/?$/, "");
+  return httpUrl.replace(/\/?$/, "") + "/status";
+}
+
+function setStatusUi(state, text) {
+  statusEl.className = "status " + state;
+  statusTextEl.textContent = text;
+}
+
+function pollStatus() {
+  var url = httpStatusUrlFor(settings.relayUrl);
+  if (!url) {
+    setStatusUi("", "not configured");
+    return;
+  }
+  setStatusUi("connecting", "checking...");
+  fetch(url)
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      setStatusUi(data.online ? "online" : "", data.online ? "Jarvis online" : "Jarvis offline");
+    })
+    .catch(function () {
+      setStatusUi("", "relay unreachable");
+    });
+}
+
+// ===== Relay WS (opens on demand for each ask) =====
+function wsUrlFor(baseUrl, token) {
+  var u = baseUrl.trim();
+  if (!u) return null;
+  var sep = u.indexOf("?") === -1 ? "?" : "&";
+  return u + sep + "role=phone&token=" + encodeURIComponent(token);
+}
+
+function askJarvis(kind, payload, onDone) {
+  var url = wsUrlFor(settings.relayUrl, settings.phoneToken);
+  if (!url) {
+    onDone({ error: "Set your relay URL and phone token in Settings first." });
+    return;
+  }
+  var socket;
+  try {
+    socket = new WebSocket(url);
+  } catch (e) {
+    onDone({ error: "Couldn't reach the relay." });
+    return;
+  }
+  var settled = false;
+  var timeout = setTimeout(function () {
+    if (settled) return;
+    settled = true;
+    onDone({ error: "Timed out waiting for the relay." });
+    try { socket.close(); } catch (e) {}
+  }, 12000);
+
+  var id = "home-" + Date.now() + "-" + Math.random().toString(36).slice(2, 8);
+  socket.onopen = function () {
+    socket.send(JSON.stringify({ type: "request", id: id, kind: kind, payload: payload || {} }));
+  };
+  socket.onmessage = function (evt) {
+    var msg;
+    try {
+      msg = JSON.parse(evt.data);
+    } catch (e) {
+      return;
+    }
+    if (msg.id !== id) return;
+    if (settled) return;
+    settled = true;
+    clearTimeout(timeout);
+    if (msg.type === "response") {
+      onDone({ text: (msg.payload && msg.payload.text) || "" });
+    } else {
+      onDone({ error: msg.message || "Jarvis returned an error." });
+    }
+    try { socket.close(); } catch (e) {}
+  };
+  socket.onerror = function () {
+    if (settled) return;
+    settled = true;
+    clearTimeout(timeout);
+    onDone({ error: "Couldn't reach the relay." });
+  };
+}
+
+// ===== Plan card =====
+var planBody = document.getElementById("plan-body");
+var btnRefreshPlan = document.getElementById("btn-refresh-plan");
+
+function loadPlan() {
+  planBody.textContent = "Asking Jarvis...";
+  planBody.classList.add("muted");
+  btnRefreshPlan.disabled = true;
+  askJarvis("daily_plan", {}, function (result) {
+    btnRefreshPlan.disabled = false;
+    if (result.error) {
+      planBody.textContent = result.error;
+      planBody.classList.add("muted");
+    } else {
+      planBody.textContent = result.text || "Nothing back from Jarvis.";
+      planBody.classList.remove("muted");
+    }
+  });
+}
+btnRefreshPlan.addEventListener("click", loadPlan);
+
+// ===== Efficiency card =====
+var effBody = document.getElementById("efficiency-body");
+var btnRefreshEff = document.getElementById("btn-refresh-eff");
+var onLaptopToggle = document.getElementById("onlaptop-toggle");
+
+onLaptopToggle.checked = localStorage.getItem(ONLAPTOP_KEY) === "1";
+
+function loadEfficiency() {
+  effBody.textContent = "Asking Jarvis...";
+  effBody.classList.add("muted");
+  btnRefreshEff.disabled = true;
+  askJarvis("efficiency", { onLaptop: onLaptopToggle.checked }, function (result) {
+    btnRefreshEff.disabled = false;
+    if (result.error) {
+      effBody.textContent = result.error;
+      effBody.classList.add("muted");
+    } else {
+      effBody.textContent = result.text || "Nothing back from Jarvis.";
+      effBody.classList.remove("muted");
+    }
+  });
+}
+btnRefreshEff.addEventListener("click", loadEfficiency);
+onLaptopToggle.addEventListener("change", function () {
+  localStorage.setItem(ONLAPTOP_KEY, onLaptopToggle.checked ? "1" : "0");
+  loadEfficiency();
+});
+
+// ===== Settings modal =====
+var modalRoot = document.getElementById("modal-root");
+var btnSettings = document.getElementById("btn-settings");
+
+function openSettings() {
+  modalRoot.innerHTML = "";
+  var overlay = document.createElement("div");
+  overlay.className = "modal-overlay";
+  var sheet = document.createElement("div");
+  sheet.className = "modal-sheet";
+  sheet.innerHTML =
+    '<h2>Settings</h2>' +
+    '<div class="field"><label>Relay URL</label><input type="text" id="f-relay" placeholder="wss://your-relay-host/ws"></div>' +
+    '<div class="field"><label>Phone token</label><input type="password" id="f-token"></div>' +
+    '<p class="note">Shared with the Jarvis chat page — set it once here or there.</p>' +
+    '<div class="modal-actions">' +
+    '<button class="btn-secondary" id="f-cancel">Cancel</button>' +
+    '<button class="btn-primary" id="f-save">Save</button>' +
+    '</div>';
+  overlay.appendChild(sheet);
+  modalRoot.appendChild(overlay);
+
+  document.getElementById("f-relay").value = settings.relayUrl;
+  document.getElementById("f-token").value = settings.phoneToken;
+
+  overlay.addEventListener("click", function (e) {
+    if (e.target === overlay) closeSettings();
+  });
+  document.getElementById("f-cancel").addEventListener("click", closeSettings);
+  document.getElementById("f-save").addEventListener("click", function () {
+    settings.relayUrl = document.getElementById("f-relay").value.trim();
+    settings.phoneToken = document.getElementById("f-token").value.trim();
+    saveSettings(settings);
+    closeSettings();
+    pollStatus();
+    loadPlan();
+    loadEfficiency();
+  });
+}
+function closeSettings() {
+  modalRoot.innerHTML = "";
+}
+btnSettings.addEventListener("click", openSettings);
+
+// ===== Boot =====
+if (!settings.relayUrl || !settings.phoneToken) {
+  openSettings();
+} else {
+  pollStatus();
+  loadPlan();
+  loadEfficiency();
+}
+setInterval(pollStatus, 20000);
+</script>
+</body>
+</html>

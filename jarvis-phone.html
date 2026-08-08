@@ -1,0 +1,614 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Jarvis</title>
+<style>
+  :root {
+    --green: #26332B;
+    --green-2: #2f3f35;
+    --bone: #E7E3D6;
+    --bone-2: #d9d4c3;
+    --amber: #F2A007;
+    --oxide: #A8412A;
+    --ink: #1c221d;
+    --ink-soft: #4a5148;
+    --line: #b9b3a0;
+    --danger: #A8412A;
+    --ok: #3f6b4a;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--green);
+    color: var(--bone);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    height: 100%;
+  }
+
+  body {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    max-width: 640px;
+    margin: 0 auto;
+    padding: env(safe-area-inset-top, 0) 0 env(safe-area-inset-bottom, 0);
+  }
+
+  h1, h2, .label { font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700; }
+
+  button { font-family: inherit; cursor: pointer; }
+  button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--amber); outline-offset: 2px; }
+
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px 8px;
+    flex-shrink: 0;
+  }
+  .topbar h1 { font-size: 20px; margin: 0; }
+  .topbar h1 .dot { color: var(--amber); }
+  .topbar-right { display: flex; align-items: center; gap: 10px; }
+
+  .status { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--bone-2); }
+  .status .lamp { width: 9px; height: 9px; border-radius: 50%; background: var(--danger); flex-shrink: 0; }
+  .status.online .lamp { background: var(--ok); }
+  .status.connecting .lamp { background: var(--amber); animation: pulse 1.2s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { opacity: 0.4; } 50% { opacity: 1; } }
+
+  .icon-btn {
+    background: transparent;
+    border: 2px solid var(--bone-2);
+    color: var(--bone);
+    border-radius: 6px;
+    min-width: 40px;
+    min-height: 40px;
+    font-size: 16px;
+  }
+
+  a.home-link { color: var(--bone); text-decoration: none; border: 2px solid var(--bone-2); border-radius: 6px; padding: 8px 10px; font-size: 13px; }
+
+  .chat {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .bubble { max-width: 82%; padding: 10px 12px; border-radius: 10px; font-size: 15px; line-height: 1.4; white-space: pre-wrap; word-wrap: break-word; }
+  .bubble.me { align-self: flex-end; background: var(--amber); color: var(--ink); border-bottom-right-radius: 2px; }
+  .bubble.jarvis { align-self: flex-start; background: var(--bone); color: var(--ink); border-bottom-left-radius: 2px; }
+  .bubble.system { align-self: center; background: transparent; color: var(--bone-2); font-size: 12px; text-align: center; max-width: 100%; }
+  .bubble.error { align-self: flex-start; background: var(--danger); color: var(--bone); }
+
+  .hint {
+    padding: 4px 14px 8px;
+    font-size: 12px;
+    color: var(--bone-2);
+    text-align: center;
+    flex-shrink: 0;
+  }
+
+  .controls {
+    flex-shrink: 0;
+    padding: 10px 14px calc(env(safe-area-inset-bottom, 0) + 14px);
+    background: var(--green-2);
+    border-top: 1px solid rgba(0,0,0,0.25);
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+  }
+  .controls textarea {
+    flex: 1;
+    resize: none;
+    min-height: 44px;
+    max-height: 120px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    background: var(--bone);
+    color: var(--ink);
+    font-size: 15px;
+    font-family: inherit;
+  }
+  .mic-btn, .send-btn {
+    min-width: 48px;
+    min-height: 48px;
+    border-radius: 50%;
+    border: none;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+  .send-btn { background: var(--amber); color: var(--ink); border-radius: 8px; padding: 0 16px; width: auto; }
+  .mic-btn { background: var(--bone); color: var(--ink); }
+  .mic-btn.listening { background: var(--oxide); color: var(--bone); animation: pulse 1s ease-in-out infinite; }
+  .mic-btn.armed { background: var(--ok); color: var(--bone); }
+
+  .wake-row { display: flex; align-items: center; justify-content: space-between; padding: 0 14px 8px; flex-shrink: 0; gap: 10px; }
+  .wake-row .label { font-size: 12px; color: var(--bone-2); }
+  .switch { position: relative; width: 42px; height: 24px; flex-shrink: 0; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .switch .track { position: absolute; inset: 0; background: var(--bone-2); border-radius: 12px; transition: 0.15s; }
+  .switch .track:before { content: ""; position: absolute; width: 18px; height: 18px; left: 3px; top: 3px; background: var(--green); border-radius: 50%; transition: 0.15s; }
+  .switch input:checked + .track { background: var(--ok); }
+  .switch input:checked + .track:before { transform: translateX(18px); background: var(--bone); }
+
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: flex; align-items: flex-end; z-index: 20; }
+  .modal-sheet { background: var(--bone); color: var(--ink); width: 100%; border-radius: 14px 14px 0 0; padding: 16px 16px calc(env(safe-area-inset-bottom, 0) + 16px); max-height: 85vh; overflow-y: auto; }
+  .modal-sheet h2 { font-size: 18px; margin: 0 0 12px; color: var(--ink); }
+  .field { margin-bottom: 12px; }
+  .field label { display: block; font-size: 12px; color: var(--ink-soft); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .field input[type=text], .field input[type=password] {
+    width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--line); font-size: 15px; background: #fff; color: var(--ink);
+  }
+  .field-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .modal-actions { display: flex; gap: 8px; margin-top: 8px; }
+  .modal-actions button { flex: 1; min-height: 44px; border-radius: 8px; border: none; font-size: 15px; font-weight: 600; }
+  .btn-primary { background: var(--oxide); color: var(--bone); }
+  .btn-secondary { background: var(--bone-2); color: var(--ink); }
+  .note { font-size: 12px; color: var(--ink-soft); margin: -6px 0 12px; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>JARVIS<span class="dot">.</span></h1>
+  <div class="topbar-right">
+    <a class="home-link" href="index.html">Home</a>
+    <div class="status" id="status"><span class="lamp"></span><span id="status-text">offline</span></div>
+    <button class="icon-btn" id="btn-settings" aria-label="Settings">&#9881;</button>
+  </div>
+</div>
+
+<div class="wake-row">
+  <span class="label" id="wake-label">Wake-word listening (only while this page is open &amp; screen is on)</span>
+  <label class="switch">
+    <input type="checkbox" id="wake-toggle">
+    <span class="track"></span>
+  </label>
+</div>
+
+<div class="chat" id="chat"></div>
+<div class="hint" id="hint"></div>
+
+<div class="controls">
+  <button class="mic-btn" id="btn-mic" aria-label="Tap to talk">&#127908;</button>
+  <textarea id="input-text" placeholder="Message Jarvis..." rows="1"></textarea>
+  <button class="send-btn" id="btn-send">Send</button>
+</div>
+
+<div id="modal-root"></div>
+
+<script>
+"use strict";
+
+var SETTINGS_KEY = "jarvisPhone:v1:settings";
+var HISTORY_KEY = "jarvisPhone:v1:history";
+var MAX_HISTORY = 60;
+
+var DEFAULT_SETTINGS = {
+  relayUrl: "",     // e.g. wss://your-relay-host/ws
+  phoneToken: "",
+  wakePhrase: "hey jarvis",
+  speakReplies: true
+};
+
+function loadSettings() {
+  try {
+    var raw = localStorage.getItem(SETTINGS_KEY);
+    if (!raw) return Object.assign({}, DEFAULT_SETTINGS);
+    var parsed = JSON.parse(raw);
+    return Object.assign({}, DEFAULT_SETTINGS, parsed);
+  } catch (e) {
+    return Object.assign({}, DEFAULT_SETTINGS);
+  }
+}
+
+function saveSettings(s) {
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
+}
+
+var settings = loadSettings();
+
+function loadHistory() {
+  try {
+    var raw = localStorage.getItem(HISTORY_KEY);
+    var parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function saveHistory(list) {
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(list.slice(-MAX_HISTORY)));
+}
+
+var history = loadHistory();
+
+// ===== Chat rendering =====
+var chatEl = document.getElementById("chat");
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, function (c) {
+    return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+  });
+}
+
+function addBubble(role, text, persist) {
+  var b = document.createElement("div");
+  b.className = "bubble " + role;
+  b.innerHTML = escapeHtml(text);
+  chatEl.appendChild(b);
+  chatEl.scrollTop = chatEl.scrollHeight;
+  if (persist !== false) {
+    history.push({ role: role, text: text, ts: Date.now() });
+    saveHistory(history);
+  }
+  return b;
+}
+
+history.forEach(function (m) { addBubble(m.role, m.text, false); });
+if (!history.length) {
+  addBubble("system", "Say your wake phrase, tap the mic, or type below.", false);
+}
+
+// ===== Relay connection =====
+var statusEl = document.getElementById("status");
+var statusTextEl = document.getElementById("status-text");
+var ws = null;
+var wsReconnectDelay = 1000;
+var wsReconnectTimer = null;
+var pending = {}; // id -> true, just for matching UI state if needed
+
+function setStatus(state, text) {
+  statusEl.className = "status " + state;
+  statusTextEl.textContent = text;
+}
+
+function wsUrlFor(baseUrl, token) {
+  var u = baseUrl.trim();
+  if (!u) return null;
+  var sep = u.indexOf("?") === -1 ? "?" : "&";
+  return u + sep + "role=phone&token=" + encodeURIComponent(token);
+}
+
+function connect() {
+  if (!settings.relayUrl || !settings.phoneToken) {
+    setStatus("", "not configured");
+    return;
+  }
+  var url = wsUrlFor(settings.relayUrl, settings.phoneToken);
+  if (!url) return;
+  setStatus("connecting", "connecting...");
+  try {
+    ws = new WebSocket(url);
+  } catch (e) {
+    setStatus("", "offline");
+    scheduleReconnect();
+    return;
+  }
+  ws.onopen = function () {
+    wsReconnectDelay = 1000;
+    setStatus("online", "connected");
+  };
+  ws.onclose = function () {
+    setStatus("", "offline");
+    scheduleReconnect();
+  };
+  ws.onerror = function () {
+    // onclose fires right after; let that handle reconnect scheduling.
+  };
+  ws.onmessage = function (evt) {
+    var msg;
+    try {
+      msg = JSON.parse(evt.data);
+    } catch (e) {
+      return;
+    }
+    if (msg.type === "response") {
+      var text = (msg.payload && msg.payload.text) || "(empty reply)";
+      addBubble("jarvis", text);
+      speak(text);
+    } else if (msg.type === "error") {
+      addBubble("error", msg.message || "Something went wrong.");
+    } else if (msg.type === "push") {
+      var pText = (msg.payload && msg.payload.text) || "";
+      if (pText) {
+        addBubble("jarvis", pText);
+        speak(pText);
+      }
+    }
+  };
+}
+
+function scheduleReconnect() {
+  if (wsReconnectTimer) return;
+  wsReconnectTimer = setTimeout(function () {
+    wsReconnectTimer = null;
+    connect();
+  }, wsReconnectDelay);
+  wsReconnectDelay = Math.min(wsReconnectDelay * 2, 30000);
+}
+
+function sendChat(text) {
+  text = text.trim();
+  if (!text) return;
+  addBubble("me", text);
+  if (!ws || ws.readyState !== WebSocket.OPEN) {
+    addBubble("error", "Not connected to the relay. Check Settings.");
+    return;
+  }
+  var id = "req-" + Date.now() + "-" + Math.random().toString(36).slice(2, 8);
+  ws.send(JSON.stringify({ type: "request", id: id, kind: "chat", payload: { text: text } }));
+}
+
+// ===== Text send =====
+var inputEl = document.getElementById("input-text");
+var btnSend = document.getElementById("btn-send");
+
+function doSend() {
+  var v = inputEl.value;
+  inputEl.value = "";
+  inputEl.style.height = "auto";
+  sendChat(v);
+}
+btnSend.addEventListener("click", doSend);
+inputEl.addEventListener("keydown", function (e) {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    doSend();
+  }
+});
+inputEl.addEventListener("input", function () {
+  inputEl.style.height = "auto";
+  inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + "px";
+});
+
+// ===== Speech synthesis (Jarvis talking back) =====
+function speak(text) {
+  if (!settings.speakReplies) return;
+  if (!("speechSynthesis" in window)) return;
+  try {
+    window.speechSynthesis.cancel();
+    var u = new SpeechSynthesisUtterance(text);
+    window.speechSynthesis.speak(u);
+  } catch (e) {
+    // ignore — text reply is already shown
+  }
+}
+
+// ===== Speech recognition (tap-to-talk + wake word) =====
+var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+var micBtn = document.getElementById("btn-mic");
+var wakeToggle = document.getElementById("wake-toggle");
+var hintEl = document.getElementById("hint");
+
+var wakeRecognizer = null;
+var wakeEnabled = false;
+var commandRecognizer = null;
+var listeningForCommand = false;
+
+if (!SR) {
+  hintEl.textContent = "Voice recognition isn't supported in this browser — type your messages instead.";
+  micBtn.disabled = true;
+  wakeToggle.disabled = true;
+} else {
+  hintEl.textContent = "Wake-word listening works only while this tab is open and in the foreground.";
+}
+
+function normalize(s) {
+  return s.toLowerCase().replace(/[^\w\s]/g, "").trim();
+}
+
+// Tap-to-talk: one-shot recognition, sends whatever it hears when it stops.
+function startTapToTalk() {
+  if (!SR || listeningForCommand) return;
+  var rec = new SR();
+  rec.lang = "en-US";
+  rec.interimResults = false;
+  rec.maxAlternatives = 1;
+  micBtn.classList.add("listening");
+  rec.onresult = function (e) {
+    var text = e.results[e.results.length - 1][0].transcript;
+    sendChat(text);
+  };
+  rec.onerror = function () {
+    micBtn.classList.remove("listening");
+  };
+  rec.onend = function () {
+    micBtn.classList.remove("listening");
+  };
+  try {
+    rec.start();
+  } catch (e) {
+    micBtn.classList.remove("listening");
+  }
+}
+micBtn.addEventListener("click", startTapToTalk);
+
+// Wake-word: continuous recognition looking for the configured phrase.
+// Mobile browsers tend to end continuous recognition after a pause, so we
+// auto-restart it while the toggle is on.
+function startWakeListening() {
+  if (!SR || wakeRecognizer) return;
+  wakeRecognizer = new SR();
+  wakeRecognizer.lang = "en-US";
+  wakeRecognizer.continuous = true;
+  wakeRecognizer.interimResults = true;
+
+  wakeRecognizer.onresult = function (e) {
+    if (listeningForCommand) return;
+    var last = e.results[e.results.length - 1];
+    var transcript = normalize(last[0].transcript);
+    var phrase = normalize(settings.wakePhrase || "hey jarvis");
+    if (!phrase) return;
+    var idx = transcript.indexOf(phrase);
+    if (idx === -1) return;
+
+    var rest = transcript.slice(idx + phrase.length).trim();
+    try {
+      wakeRecognizer.stop();
+    } catch (err) {}
+    if (rest) {
+      sendChat(rest);
+    } else {
+      captureCommand();
+    }
+  };
+
+  wakeRecognizer.onerror = function (e) {
+    // "no-speech" / "aborted" are routine on mobile; anything else, back off.
+    if (e.error === "not-allowed" || e.error === "service-not-allowed") {
+      wakeEnabled = false;
+      wakeToggle.checked = false;
+      hintEl.textContent = "Microphone access was denied — allow it in browser settings to use wake-word listening.";
+    }
+  };
+
+  wakeRecognizer.onend = function () {
+    wakeRecognizer = null;
+    if (wakeEnabled && !listeningForCommand) {
+      setTimeout(startWakeListening, 250);
+    }
+  };
+
+  try {
+    wakeRecognizer.start();
+    micBtn.classList.add("armed");
+  } catch (e) {
+    wakeRecognizer = null;
+  }
+}
+
+function stopWakeListening() {
+  micBtn.classList.remove("armed");
+  if (wakeRecognizer) {
+    try {
+      wakeRecognizer.stop();
+    } catch (e) {}
+  }
+}
+
+// After the bare wake phrase with nothing following, open a short one-shot
+// window to capture the actual command.
+function captureCommand() {
+  if (!SR) return;
+  listeningForCommand = true;
+  micBtn.classList.remove("armed");
+  micBtn.classList.add("listening");
+  addBubble("system", "Listening...", false);
+
+  commandRecognizer = new SR();
+  commandRecognizer.lang = "en-US";
+  commandRecognizer.interimResults = false;
+  commandRecognizer.maxAlternatives = 1;
+
+  var handled = false;
+  commandRecognizer.onresult = function (e) {
+    handled = true;
+    var text = e.results[e.results.length - 1][0].transcript;
+    sendChat(text);
+  };
+  commandRecognizer.onend = function () {
+    listeningForCommand = false;
+    micBtn.classList.remove("listening");
+    if (wakeEnabled) startWakeListening();
+  };
+  commandRecognizer.onerror = function () {
+    listeningForCommand = false;
+  };
+  try {
+    commandRecognizer.start();
+  } catch (e) {
+    listeningForCommand = false;
+  }
+}
+
+wakeToggle.addEventListener("change", function () {
+  wakeEnabled = wakeToggle.checked;
+  if (wakeEnabled) {
+    startWakeListening();
+  } else {
+    stopWakeListening();
+  }
+});
+
+document.addEventListener("visibilitychange", function () {
+  // Browsers already suspend mic access when backgrounded; stopping
+  // explicitly avoids a zombie recognizer silently failing to restart.
+  if (document.hidden && wakeRecognizer) {
+    stopWakeListening();
+  } else if (!document.hidden && wakeEnabled && !wakeRecognizer) {
+    startWakeListening();
+  }
+});
+
+// ===== Settings modal =====
+var modalRoot = document.getElementById("modal-root");
+var btnSettings = document.getElementById("btn-settings");
+
+function openSettings() {
+  modalRoot.innerHTML = "";
+  var overlay = document.createElement("div");
+  overlay.className = "modal-overlay";
+  var sheet = document.createElement("div");
+  sheet.className = "modal-sheet";
+  sheet.innerHTML =
+    '<h2>Settings</h2>' +
+    '<div class="field"><label>Relay URL</label><input type="text" id="f-relay" placeholder="wss://your-relay-host/ws"></div>' +
+    '<div class="field"><label>Phone token</label><input type="password" id="f-token"></div>' +
+    '<div class="field"><label>Wake phrase</label><input type="text" id="f-wake"></div>' +
+    '<p class="note">Set this to anything you want — it’s matched locally in your browser, never sent anywhere.</p>' +
+    '<div class="field-row"><label for="f-speak">Speak Jarvis’ replies out loud</label>' +
+    '<label class="switch"><input type="checkbox" id="f-speak"><span class="track"></span></label></div>' +
+    '<div class="modal-actions">' +
+    '<button class="btn-secondary" id="f-cancel">Cancel</button>' +
+    '<button class="btn-primary" id="f-save">Save</button>' +
+    '</div>';
+  overlay.appendChild(sheet);
+  modalRoot.appendChild(overlay);
+
+  document.getElementById("f-relay").value = settings.relayUrl;
+  document.getElementById("f-token").value = settings.phoneToken;
+  document.getElementById("f-wake").value = settings.wakePhrase;
+  document.getElementById("f-speak").checked = !!settings.speakReplies;
+
+  overlay.addEventListener("click", function (e) {
+    if (e.target === overlay) closeSettings();
+  });
+  document.getElementById("f-cancel").addEventListener("click", closeSettings);
+  document.getElementById("f-save").addEventListener("click", function () {
+    settings.relayUrl = document.getElementById("f-relay").value.trim();
+    settings.phoneToken = document.getElementById("f-token").value.trim();
+    settings.wakePhrase = document.getElementById("f-wake").value.trim() || "hey jarvis";
+    settings.speakReplies = document.getElementById("f-speak").checked;
+    saveSettings(settings);
+    closeSettings();
+    if (ws) {
+      try { ws.close(); } catch (e) {}
+    }
+    wsReconnectDelay = 1000;
+    connect();
+  });
+}
+function closeSettings() {
+  modalRoot.innerHTML = "";
+}
+btnSettings.addEventListener("click", openSettings);
+
+if (!settings.relayUrl || !settings.phoneToken) {
+  openSettings();
+} else {
+  connect();
+}
+</script>
+</body>
+</html>

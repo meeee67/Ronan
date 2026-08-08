@@ -1,0 +1,14 @@
+{
+  "name": "ronan-jarvis-relay",
+  "version": "1.0.0",
+  "description": "Internet-reachable relay between the phone app / home page and Jarvis running on the laptop. Jarvis dials out (no port forwarding needed); phone/home clients dial in and send requests that get relayed to Jarvis and back.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "express": "^5.2.1",
+    "ws": "^8.18.0"
+  }
+}
