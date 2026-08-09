@@ -43,11 +43,17 @@ Listens on `0.0.0.0:3001` by default (`PORT`/`HOST` env vars to change).
 proxy (Caddy/nginx) or a zero-config tunnel (Tailscale Funnel, Cloudflare
 Tunnel) both work; the bearer tokens are meaningless over plain HTTP/WS.
 
-## Recommended: run it on the laptop, right next to jarvis.py
+## Run it on the laptop, right next to jarvis.py
 
-You don't need a separate server to rent or manage. Run `relay-server` on
-the same Windows machine as `jarvis.py` and punch a hole to it with a free
-Cloudflare Quick Tunnel — no account, no port forwarding, no DNS to set up:
+You don't need a separate server to rent or manage — `relay-server` runs
+on the same Windows machine as `jarvis.py`. Two ways to expose it, pick
+one:
+
+### Quick test (5 minutes, but fragile)
+
+Good for confirming everything's wired up correctly. Not good for actual
+daily use — the moment either terminal window closes, or the laptop sleeps,
+your phone can't reach it, and the URL changes every restart.
 
 ```powershell
 # Terminal 1 — the relay itself, staying on localhost
@@ -61,18 +67,61 @@ winget install --id Cloudflare.cloudflared
 cloudflared tunnel --url http://localhost:3001
 ```
 
-On your phone, just open `https://<random-words>.trycloudflare.com/` —
-that loads `index.html` straight from the relay. Tap the gear icon and set
-Relay URL to the same host with `wss://` and `/ws` (e.g.
-`wss://<random-words>.trycloudflare.com/ws`) and your phone token. Add it
-to your home screen for an app-like icon. `jarvis-integration`'s config on
-the laptop uses the same `wss://.../ws` URL, with the laptop token instead.
+On your phone, open `https://<random-words>.trycloudflare.com/` — that
+loads `index.html` straight from the relay. Gear icon → Settings → Relay
+URL `wss://<random-words>.trycloudflare.com/ws` + your phone token.
 
-Trade-off: a Quick Tunnel's URL changes every time you restart `cloudflared`,
-so you'd re-paste it into both places after a laptop reboot. Once this is
-working end-to-end, swap in a **named** tunnel (free Cloudflare account +
-a domain, URL stays fixed across restarts) or Tailscale Funnel if that
-becomes annoying.
+### Make it stay up permanently (do this once, forget about it)
+
+Two problems to solve: the relay needs to survive closed terminals/reboots,
+and the public URL needs to stop changing every restart. [Tailscale](https://tailscale.com)
+Funnel fixes both — free, no domain to buy, gives you a fixed
+`https://<device>.<tailnet>.ts.net` address, and runs as a background
+Windows service (no terminal window required at all).
+
+```powershell
+# 1. Install Tailscale (also installs its background service)
+winget install tailscale.tailscale
+tailscale up   # opens a browser tab to sign in — free account, any email/Google/GitHub
+
+# 2. Point Funnel at the relay's port. This is stored by the background
+#    tailscaled service, not tied to this terminal staying open.
+tailscale funnel --bg 3001
+
+# 3. Get your fixed public URL
+tailscale funnel status
+```
+
+(Exact flags occasionally change between Tailscale versions — `tailscale
+funnel --help` if `--bg` doesn't work as shown.)
+
+Then make `relay-server` itself survive reboots/crashes without a terminal:
+
+```powershell
+cd relay-server
+powershell -ExecutionPolicy Bypass -File scripts\install-startup-task.ps1
+```
+
+That registers a Scheduled Task that starts `node server.js` at logon and
+restarts it automatically if it ever crashes (`scripts\uninstall-startup-task.ps1`
+to remove it later).
+
+One thing this *doesn't* fix: if the laptop itself is fully asleep, it's off
+the network and nothing reaches it regardless of services/tasks. If you
+want the phone to always be able to reach it, stop the laptop from sleeping
+while plugged in:
+
+```powershell
+powercfg /change standby-timeout-ac 0
+```
+
+(Leaves battery-mode sleep alone — only affects it while charging.)
+
+Once this is set up: your phone's Settings (Relay URL / phone token) only
+need entering **once** — the URL doesn't change anymore. Update
+`jarvis-integration`'s config to point at `ws://localhost:3001/ws` instead
+of the public URL — since `jarvis.py` runs on the same machine as
+`relay-server`, it doesn't need to go out to the internet and back in.
 
 ## Protocol
 

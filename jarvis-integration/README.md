@@ -32,8 +32,10 @@ build/CI step).
 ## Setup
 
 1. `pip install -r requirements.txt` in Jarvis's Python environment.
-2. Run `relay-server` somewhere reachable (see `../relay-server/README.md`)
-   and grab the **laptop token** it prints.
+2. Run `relay-server` on the same machine (see `../relay-server/README.md`
+   for the "stay up permanently" setup — a Scheduled Task + Tailscale
+   Funnel, no terminal window required) and grab the **laptop token** it
+   prints.
 3. Copy `relay_client.py`, `mcp_client.py`, and your filled-in
    `mcp_servers.json` into the `files` source folder, then to `C:\Jarvis`
    (same two-step deploy as every other Jarvis file).
@@ -64,11 +66,14 @@ build/CI step).
    `daily_plan`/`efficiency` replies in real numbers from the tracker MCP
    server via `mcp_client.call_tool("ronan-tracker", "get_totals")`.
 
-5. Store `RELAY_WS_URL` / `LAPTOP_TOKEN` the same way `config.json` already
-   stores the Anthropic API key — a gitignored local file, not committed.
+5. Set `RELAY_WS_URL = "ws://localhost:3001/ws"` — since `relay-server`
+   runs on the same machine as `jarvis.py`, connect over localhost, not the
+   public Tailscale/Cloudflare URL (only the phone needs the public one).
+   Store it and `LAPTOP_TOKEN` the same way `config.json` already stores
+   the Anthropic API key — a gitignored local file, not committed.
 6. On the phone app (`jarvis-phone.html`) and home page (`index.html`),
-   open Settings and enter the relay's **phone** token (different token,
-   same relay).
+   open Settings and enter the relay's **public** URL (Tailscale/Cloudflare,
+   with `wss://`) and **phone** token (different token, same relay).
 
 ## What "connect to any MCP" means here
 

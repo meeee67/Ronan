@@ -42,18 +42,23 @@ revenue tracker it's grounded in.
 
 1. **Tracker**: nothing to do — open `tracker.html` on your phone, it just
    works (localStorage).
-2. **Relay**: run it on the laptop itself, right next to `jarvis.py`, and
-   expose it with a free Cloudflare Quick Tunnel — no separate server to
-   rent, no port forwarding. See `relay-server/README.md`'s "Recommended"
-   section for the exact commands. Save the printed laptop token and phone
-   token(s), and the `https://...trycloudflare.com` URL it gives you.
+2. **Relay**: run it on the laptop itself, right next to `jarvis.py`. Two
+   options in `relay-server/README.md`: a 5-minute Cloudflare Quick Tunnel
+   to confirm things work, or (recommended once that's confirmed) the
+   "stay up permanently" setup — Tailscale Funnel for a fixed URL + a
+   Scheduled Task so the relay survives reboots/closed terminals. Either
+   way, save the printed laptop token and phone token(s), and the public
+   URL you're given.
 3. **Jarvis side**: follow `jarvis-integration/README.md` to wire the relay
-   client (and, optionally, the tracker MCP server) into `jarvis.py`.
+   client (and, optionally, the tracker MCP server) into `jarvis.py`. It
+   connects to the relay over `localhost`, not the public URL — only the
+   phone needs that.
 4. **Phone**: relay-server also serves the app pages, so just open the
-   `https://...trycloudflare.com/` URL from step 2 on your phone — that's
-   `index.html`. Enter the `wss://...trycloudflare.com/ws` relay URL and
-   your phone token in Settings (shared with `jarvis-phone.html`
-   automatically), then add the page to your home screen.
+   public URL from step 2 on your phone — that's `index.html`. Enter the
+   same URL with `wss://` + `/ws` and your phone token in Settings (shared
+   with `jarvis-phone.html` automatically), then add the page to your home
+   screen. With the permanent setup, you only do this once — the URL stops
+   changing.
 
 ## Known limitation
 
