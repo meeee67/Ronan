@@ -1,0 +1,2 @@
+:HL["/Ronan/_next/static/chunks/0u06z5iw-pr4j.css","style"]
+0:{"tree":{"name":"","param":null,"prefetchHints":4176,"slots":{"children":{"name":"/_not-found","param":null,"prefetchHints":4192,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":4256,"slots":null}}}}},"staleTime":300,"buildId":"vbDSnuCNh0mQ1B5Anp_v4"}
