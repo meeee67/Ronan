@@ -49,9 +49,11 @@ revenue tracker it's grounded in.
    token(s), and the `https://...trycloudflare.com` URL it gives you.
 3. **Jarvis side**: follow `jarvis-integration/README.md` to wire the relay
    client (and, optionally, the tracker MCP server) into `jarvis.py`.
-4. **Phone/home page**: open `index.html`, enter the relay URL (as
-   `wss://...trycloudflare.com/ws`) and your phone token in Settings
-   (shared with `jarvis-phone.html` automatically).
+4. **Phone**: relay-server also serves the app pages, so just open the
+   `https://...trycloudflare.com/` URL from step 2 on your phone — that's
+   `index.html`. Enter the `wss://...trycloudflare.com/ws` relay URL and
+   your phone token in Settings (shared with `jarvis-phone.html`
+   automatically), then add the page to your home screen.
 
 ## Known limitation
 

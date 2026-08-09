@@ -11,6 +11,12 @@ connection to Jarvis and back.
 This is a message relay, not a database — nothing is persisted except the
 two auth tokens. If the relay process restarts, both sides just reconnect.
 
+It also serves `index.html`, `tracker.html`, and `jarvis-phone.html` (from
+the repo root, one level up) over plain HTTP, so whatever URL reaches this
+server is also the URL your phone opens to use the app — no separate static
+host needed. Nothing else in the repo is servable; those three pages are
+named explicitly, not a directory listing.
+
 ## Two roles, two tokens
 
 - **laptop token** — goes ONLY into `jarvis-integration/relay_client.py` on
@@ -55,10 +61,12 @@ winget install --id Cloudflare.cloudflared
 cloudflared tunnel --url http://localhost:3001
 ```
 
-Use the printed `https://...trycloudflare.com` URL (swap `https://` for
-`wss://` and append `/ws`) as the relay URL everywhere: in
-`jarvis-integration`'s config on the laptop, and in Settings on
-`jarvis-phone.html` / `index.html` on your phone.
+On your phone, just open `https://<random-words>.trycloudflare.com/` —
+that loads `index.html` straight from the relay. Tap the gear icon and set
+Relay URL to the same host with `wss://` and `/ws` (e.g.
+`wss://<random-words>.trycloudflare.com/ws`) and your phone token. Add it
+to your home screen for an app-like icon. `jarvis-integration`'s config on
+the laptop uses the same `wss://.../ws` URL, with the laptop token instead.
 
 Trade-off: a Quick Tunnel's URL changes every time you restart `cloudflared`,
 so you'd re-paste it into both places after a laptop reboot. Once this is

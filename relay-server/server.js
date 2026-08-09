@@ -1,6 +1,7 @@
 "use strict";
 
 const http = require("http");
+const path = require("path");
 const express = require("express");
 const { WebSocketServer } = require("ws");
 
@@ -10,6 +11,7 @@ const { Hub } = require("./lib/hub");
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3001;
 const HOST = process.env.HOST || "0.0.0.0";
 const HEARTBEAT_MS = 30000;
+const REPO_ROOT = path.join(__dirname, "..");
 
 const hub = new Hub();
 const app = express();
@@ -20,6 +22,16 @@ app.use(express.json());
 // before the user has even opened a websocket.
 app.get("/status", (req, res) => res.json(hub.status()));
 app.get("/healthz", (req, res) => res.json({ ok: true }));
+
+// Serve the three phone/home-facing pages so the same tunnel URL that
+// reaches Jarvis also opens the app — no separate static host needed.
+// Named routes on purpose (not express.static on the repo root): the repo
+// also holds relay-server/mcp-server source and gitignored tokens/config
+// that must never be servable, so only these exact files are exposed.
+const PUBLIC_PAGES = { "/": "index.html", "/index.html": "index.html", "/tracker.html": "tracker.html", "/jarvis-phone.html": "jarvis-phone.html" };
+for (const [route, file] of Object.entries(PUBLIC_PAGES)) {
+  app.get(route, (req, res) => res.sendFile(path.join(REPO_ROOT, file)));
+}
 
 const server = http.createServer(app);
 const wss = new WebSocketServer({ noServer: true });
