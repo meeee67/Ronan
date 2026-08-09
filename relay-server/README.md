@@ -37,6 +37,35 @@ Listens on `0.0.0.0:3001` by default (`PORT`/`HOST` env vars to change).
 proxy (Caddy/nginx) or a zero-config tunnel (Tailscale Funnel, Cloudflare
 Tunnel) both work; the bearer tokens are meaningless over plain HTTP/WS.
 
+## Recommended: run it on the laptop, right next to jarvis.py
+
+You don't need a separate server to rent or manage. Run `relay-server` on
+the same Windows machine as `jarvis.py` and punch a hole to it with a free
+Cloudflare Quick Tunnel — no account, no port forwarding, no DNS to set up:
+
+```powershell
+# Terminal 1 — the relay itself, staying on localhost
+cd relay-server
+npm install
+npm start
+
+# Terminal 2 — exposes it publicly over HTTPS/WSS, prints a
+# https://<random-words>.trycloudflare.com URL
+winget install --id Cloudflare.cloudflared
+cloudflared tunnel --url http://localhost:3001
+```
+
+Use the printed `https://...trycloudflare.com` URL (swap `https://` for
+`wss://` and append `/ws`) as the relay URL everywhere: in
+`jarvis-integration`'s config on the laptop, and in Settings on
+`jarvis-phone.html` / `index.html` on your phone.
+
+Trade-off: a Quick Tunnel's URL changes every time you restart `cloudflared`,
+so you'd re-paste it into both places after a laptop reboot. Once this is
+working end-to-end, swap in a **named** tunnel (free Cloudflare account +
+a domain, URL stays fixed across restarts) or Tailscale Funnel if that
+becomes annoying.
+
 ## Protocol
 
 WebSocket at `/ws?role=laptop|phone&token=<token>` (token can also go in an

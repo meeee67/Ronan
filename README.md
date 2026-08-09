@@ -42,13 +42,16 @@ revenue tracker it's grounded in.
 
 1. **Tracker**: nothing to do — open `tracker.html` on your phone, it just
    works (localStorage).
-2. **Relay**: `cd relay-server && npm install && npm start`, save the
-   printed laptop token and phone token(s). Put it behind HTTPS/WSS if it's
-   reachable from the internet (see `relay-server/README.md`).
+2. **Relay**: run it on the laptop itself, right next to `jarvis.py`, and
+   expose it with a free Cloudflare Quick Tunnel — no separate server to
+   rent, no port forwarding. See `relay-server/README.md`'s "Recommended"
+   section for the exact commands. Save the printed laptop token and phone
+   token(s), and the `https://...trycloudflare.com` URL it gives you.
 3. **Jarvis side**: follow `jarvis-integration/README.md` to wire the relay
    client (and, optionally, the tracker MCP server) into `jarvis.py`.
-4. **Phone/home page**: open `index.html`, enter the relay URL and your
-   phone token in Settings (shared with `jarvis-phone.html` automatically).
+4. **Phone/home page**: open `index.html`, enter the relay URL (as
+   `wss://...trycloudflare.com/ws`) and your phone token in Settings
+   (shared with `jarvis-phone.html` automatically).
 
 ## Known limitation
 
