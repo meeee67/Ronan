@@ -1,0 +1,15 @@
+{
+  "name": "ronan-tracker-mcp",
+  "version": "1.0.0",
+  "description": "Remote MCP server exposing the Ronan time/activity tracker's data as tools for an AI assistant.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "express": "^5.2.1",
+    "zod": "^4.4.3"
+  }
+}
